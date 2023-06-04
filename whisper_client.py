@@ -28,6 +28,8 @@ import subprocess, signal
 import requests
 import json
 from mimic3_client import say
+from gradio_client import Client
+client = Client("http://localhost:7860/")
 
 # address of Fallback Chat Server.
 fallback_chat_url = 'http://localhost:5000'
@@ -108,28 +110,11 @@ def process_hotkeys(txt):
             return True
     return False
 
-# init whisper_jax
-print("Loading... Please wait.")
-from whisper_jax import FlaxWhisperPipline
-# https://huggingface.co/models?sort=downloads&search=whisper
-# openai/whisper-tiny       39M Parameters
-# openai/whisper-tiny.en    39M Parameters
-# openai/whisper-base       74M
-# openai/whisper-small.en   244M
-# openai/whisper-medium.en  769M
-# openai/whisper-large      1550M
-# openai/whisper-large-v2   1550M
-pipeline = FlaxWhisperPipline("openai/whisper-small.en")
-
 def gettext(f):
-    try:
-        outputs = pipeline(f, task="transcribe", language="English")
-    except:
-        return ''
-    return outputs['text']
-
-def preload():
-    gettext("click.wav")
+    result = ['']
+    if f and os.path.isfile(f):
+        result = client.predict(f, "transcribe", False, api_name="/predict")
+    return result[0]
     
 def pastetext(t):
     # paste text in window
@@ -273,9 +258,6 @@ if __name__ == '__main__':
     running = True
     record_thread = threading.Thread(target=recorder)
     record_thread.start()
-    # preload whisper_jax for subsequent speedup
-    preload_thread = threading.Thread(target=preload)
-    preload_thread.start()
     pyperclip.init_xsel_clipboard()
     start = 0
     transcribe()
